@@ -1,5 +1,7 @@
 def bw(x,a,b):
     return min(a,b)<=x and x<=max(a,b)
+
+
 def intersect(line1, line2):
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
     ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
@@ -19,6 +21,7 @@ def intersect(line1, line2):
     if not c:
         raise Exception('lines do not intersect')
     return x, y
+
 
 def part1(paths, ints):
     lines = []
@@ -55,6 +58,7 @@ def part1(paths, ints):
                 pass
     dists = [abs(x[0])+abs(x[1]) for x in ints[1:]]
     print(min(dists))
+
 
 def part2(paths, ints):
     ss = {}
@@ -103,12 +107,4 @@ if __name__=="__main__":
     ints = []
     part1(paths, ints)
     part2(paths, ints)
-
-
-
-
-
-    
-
-
 
