@@ -7,5 +7,5 @@ What I have learnt this year:
 - 3 address computer is a beautiful thing
 - defaultdict in python is a nice shorthand
 - look-up tables are again better than code
-- day 7 is a wake-up call for Rust. Done in a rush in Python but I regeret taht I was not using Rust
+- day 7 is a wake-up call for Rust. Done in a rush in Python but I regret that I was not using Rust
 
