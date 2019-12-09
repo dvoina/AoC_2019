@@ -1,10 +1,30 @@
 import itertools
-from multiprocessing import Process, Queue
 import time
 
+class Queue(object):
+    def __init__(self, data = []):
+        self.data = data
+
+    def put(self, x):
+        self.data.append(x)
+
+    def get(self):
+        return self.data.pop(0)
+
+    def __repr__(self):
+        return repr(self.data)
+
+    def __str__(self):
+        return str(self.data)
+
 class Operand(object):
-    def __init__(self):
-        self.data = None
+    pass
+        
+
+class Immediate(Operand):
+    def __init__(self, value):
+        Operand.__init__(self)
+        self.data = value
 
     def get(self):
         return self.data
@@ -12,30 +32,52 @@ class Operand(object):
     def set(self, value):
         self.data = value
 
-class Immediate(Operand):
-    def __init__(self, value):
-        Operand.__init__(self)
-        self.data = value
+    def __str__(self):
+        return "#{}".format(self.data)
+
 
 class Address(Operand):
     def __init__(self, memory, address):
         Operand.__init__(self)
         self.memory = memory
-        self.data = address
+        self.address = address
 
     def get(self):
-        return self.memory[self.data]
+        return self.memory[self.address]
 
     def set(self, value):
-        self.memory[self.data] = value
+        self.memory[self.address] = value
+
+    def __str__(self):
+        return "@({})".format(self.address)
+
+class RelativeAddress(Address):
+    def __init__(self, memory, base, address):
+        Address.__init__(self, memory, address)
+        self.memory = memory
+        self.base = base
+        self.address= address
+
+    def get(self):
+        return self.memory[self.base + self.address]
+
+    def set(self, value):
+        self.memory[self.base + self.address] = value
+
+    def __str__(self):
+        return "@({} + {})".format(self.base, self.address)
 
 class CPU(object):
-    def __init__(self, name, memory, inQ, outQ):
+    MNEMOS = {1:"add", 2:"mul", 3:"in", 4:"out", 5:"jnz", 6:"jz", 7:"lt", 8:"eq", 9:"sb", 99:"halt"}
+
+    def __init__(self, name, memory, inQ, outQ, debug = False):
         self.name = name
         self.memory = memory[:]
         self.ip = 0
         self._in = inQ
         self._out = outQ 
+        self.base = 0
+        self.debug = debug
 
 
     def __fetch(self) -> tuple:
@@ -48,19 +90,26 @@ class CPU(object):
         m2, modes = divmod(modes, 10)
         m1 = modes
         try:
+            op1, op2, res = None, None, None
+            if m1 == 2:
+                op1 = RelativeAddress(self.memory, self.base, instruction[1])
             if m1 == 1:
                 op1 = Immediate(instruction[1])
-            else:
+            if m1 == 0:
                 op1 = Address(self.memory, instruction[1])
 
+            if m2 == 2:
+                op2 = RelativeAddress(self.memory, self.base, instruction[2])
             if m2 == 1:
                 op2 = Immediate(instruction[2])
-            else:
+            if m2 == 0:
                 op2 = Address(self.memory, instruction[2])
 
+            if m3 == 2:
+                res = RelativeAddress(self.memory, self.base, instruction[3])
             if m3 == 1:
                 res = Immediate(instruction[3])
-            else:
+            if m3 == 0:
                 res = Address(self.memory, instruction[3])
 
             return (opcode, op1, op2, res)
@@ -70,6 +119,8 @@ class CPU(object):
 
     def __execute(self, instruction:tuple) -> int:
         opcode, op1, op2, res = instruction
+        if self.debug:
+            print("{} {} {} {}".format(CPU.MNEMOS[opcode], op1, op2, res))
         
         if opcode == 1:
             res.set(op1.get() + op2.get())
@@ -105,6 +156,10 @@ class CPU(object):
             else:
                 res.set(0)
             return self.ip+4
+
+        if opcode == 9:
+            self.base += op1.get()
+            return self.ip + 2
         
         if opcode == 8:
             if op1.get() == op2.get():
@@ -121,63 +176,20 @@ class CPU(object):
         while self.ip != None:
             self.ip = self.__execute(self.__decode(self.__fetch()))
 
-def interpret_mp(c, inQ, outQ) -> int:
-    print("starting "+c.name)
-    c.interpret()
-    print("done "+c.name)
-
-
-def part1(data):
-    #part1
-    phases = list(itertools.permutations([0,1,2,3,4]))
-    sol = []
-    for p in phases:
-        _s = 0
-        for i in range(5):
-            q1 = Queue()
-            q1.put(p[i])
-            q1.put(_s)
-            q2 = Queue()
-            c = CPU("CPU_"+str(i), data, q1, q2)
-            c.interpret()
-            _s = q2.get()
-        sol.append(_s)
-    print(max(sol))
-
-def part2(data):
-    #part2
-    phases = list(itertools.permutations([5,6,7,8,9]))
-    sol = []
-    for p in phases:
-        _s = 0
-        q = []
-        c = []
-        j = []
-        for i in range(5):
-            _q = Queue()
-            _q.put(p[i])
-            q.append(_q)
-        q[0].put(0)
-        for i in range(5):
-            cc = CPU("CPU_"+str(i), _data, q[i], q[(i+1) % 5])
-            w = Process(target = interpret_mp, args=(cc, q[i], q[(i+1) % 5]))
-            c.append(cc)
-            j.append(w)
-            w.start()
-        while len(j)>0:
-            j = [jj for jj in j if jj.is_alive()]
-            time.sleep(0.1)
-        sol.append(c[4]._out.get())
-        print("------------------")
-    print(max(sol))
 
 if __name__=="__main__":
-    _data = [int(x) for x in open("d07.in").read().split(",")]
-    _data.extend([99] * 4)
-    
-    part1(_data)
-    part2(_data)
+    _memory = [0] * 64 * 1024 * 1024
+    _data = [int(x) for x in open("d09.in").read().split(",")]
+    #_data = [int(x) for x in "1102,34915192,34915192,7,4,7,99,0".split(",")]
+    _memory[0:len(_data)] = _data
 
- 
+    outq = Queue()
+    c = CPU("Part1", _memory, Queue([1]), outq)
+    c.interpret()
+    print(outq.get())
+    c = CPU("Part1", _memory, Queue([2]), outq)
+    c.interpret()
+    print(outq.get())
+
 
 
