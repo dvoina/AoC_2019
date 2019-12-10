@@ -51,6 +51,7 @@ class Address(Operand):
     def __str__(self):
         return "@({})".format(self.address)
 
+
 class RelativeAddress(Address):
     def __init__(self, memory, base, address):
         Address.__init__(self, memory, address)
@@ -168,6 +169,10 @@ class CPU(object):
                 res.set(0)
             return self.ip+4
 
+        if opcode == 9:
+            self.base = op1.get()
+            return self.ip + 2
+
         if opcode == 99:
             return None
 
@@ -187,7 +192,7 @@ if __name__=="__main__":
     c = CPU("Part1", _memory, Queue([1]), outq)
     c.interpret()
     print(outq.get())
-    c = CPU("Part1", _memory, Queue([2]), outq)
+    c = CPU("Part2", _memory, Queue([2]), outq)
     c.interpret()
     print(outq.get())
 
