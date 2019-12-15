@@ -1,5 +1,6 @@
 from collections import defaultdict
 import math
+from intcode import intcode as ic
 
 def alchemy(fuel):
     requires = defaultdict(int, {"FUEL": -fuel})
@@ -43,3 +44,6 @@ if __name__=="__main__":
             minF = fuel
 
     print("Part 2:", maxF)
+
+    for x in ic.Queue([1,2,3]):
+        print(x)
